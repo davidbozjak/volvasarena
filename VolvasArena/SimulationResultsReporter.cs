@@ -2,6 +2,10 @@
 
 interface ISimulationResultsReporter
 {
+    IReadOnlyList<TraderBotScoreCard>[] BotScoreCardsForAllRounds { get; }
+
+    IReadOnlyList<double[]> PriceSeries { get; }
+
     void AddScorecard(TraderBotScoreCard[] scoreCards);
 
     void AddPriceDevelopment(IAssetPriceProvider assetPriceProvider);

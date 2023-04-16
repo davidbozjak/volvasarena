@@ -2,8 +2,10 @@
 
 static class ScoreCardSummarizer
 {
-    public static void PrintReport(IReadOnlyList<TraderBotScoreCard>[] scorecards, Func<TraderBotScoreCard, double> kpiSelector, IOutputControl output)
+    public static void PrintReport(ISimulationResultsReporter simulationResultsReporter, Func<TraderBotScoreCard, double> kpiSelector, IOutputControl output)
     {
+        var scorecards = simulationResultsReporter.BotScoreCardsForAllRounds;
+
         int numberOfBots = scorecards.Length;
         int numberOfRoundsSimulated = scorecards[0].Count;
 
@@ -38,12 +40,19 @@ static class ScoreCardSummarizer
         histogram = new Histogram(20, winnerScoreCards.Select(kpiSelector));
         histogram.Print(output, maxStarsInColumn: 50);
 
-        Console.WriteLine();
-        Console.WriteLine($"Average KPI over all runs:");
+        output.WriteLine("");
+        output.WriteLine($"Average KPI over all runs:");
 
         foreach (var podiumMember in winsPerBot.OrderByDescending(w => w.NumberOfWins))
         {
-            Console.WriteLine($"[{podiumMember.NumberOfWins} wins]: {botNames[podiumMember.BotIndex]}: Expected {scorecards[podiumMember.BotIndex].Select(kpiSelector).Average():N2} with {scorecards[podiumMember.BotIndex].Average(w => w.TotalNumberOfTransactions):N3} transactions on average");
+            output.WriteLine($"[{podiumMember.NumberOfWins} wins]: {botNames[podiumMember.BotIndex]}: Expected {scorecards[podiumMember.BotIndex].Select(kpiSelector).Average():N2} with {scorecards[podiumMember.BotIndex].Average(w => w.TotalNumberOfTransactions):N3} transactions on average");
         }
+
+        output.WriteLine("");
+        output.WriteLine("Asset price development during this time:");
+
+        var finalPrices = simulationResultsReporter.PriceSeries.Select(w => w.Last()).ToList();
+        var priceHistogram = new Histogram(20, finalPrices);
+        priceHistogram.Print(output, maxStarsInColumn: 30);
     }
 }

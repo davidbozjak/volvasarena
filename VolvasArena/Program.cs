@@ -11,15 +11,6 @@ double startAssetPrice = 100;
 int numOfSimulationsToRun = 100;
 int simulateTicks = 200;
 
-//var endprices = new List<double>();
-//for (int i = 0; i < numOfSimulationsToRun; i++)
-//{
-//    endprices.Add(SimulatePriceMove(GetSlowlyRisingPriceSimulator(100)));
-//}
-
-//var priceHistogram = new Histogram(20, endprices);
-//priceHistogram.Print(output, maxStarsInColumn: 30);
-
 var buyStrategies = BuyAndSellStrategy.GetBuySrategies().ToArray();
 var sellStrategies = BuyAndSellStrategy.GetSellSrategies().ToArray();
 
@@ -30,7 +21,7 @@ await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks,
     GetBalancedPriceSimulator,
     factory,
     reporter);
-ScoreCardSummarizer.PrintReport(reporter.BotScoreCardsForAllRounds, scoreCard => scoreCard.TotalRealizedProfit, output);
+ScoreCardSummarizer.PrintReport(reporter, scoreCard => scoreCard.TotalRealizedProfit, output);
 
 factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
 reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "FALLING");
@@ -39,7 +30,7 @@ await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks,
     GetSlowlyFallingPriceSimulator,
     factory,
     reporter);
-ScoreCardSummarizer.PrintReport(reporter.BotScoreCardsForAllRounds, scoreCard => scoreCard.TotalRealizedProfit, output);
+ScoreCardSummarizer.PrintReport(reporter, scoreCard => scoreCard.TotalRealizedProfit, output);
 
 factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
 reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "RAISING");
@@ -48,7 +39,7 @@ await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks,
     GetSlowlyRisingPriceSimulator,
     factory,
     reporter);
-ScoreCardSummarizer.PrintReport(reporter.BotScoreCardsForAllRounds, scoreCard => scoreCard.TotalRealizedProfit, output);
+ScoreCardSummarizer.PrintReport(reporter, scoreCard => scoreCard.TotalRealizedProfit, output);
 
 factory = new BotArena.DifferentStartMoneyFactory(1000, 10000, 5, assetType, BuyAndSellStrategy.BuyStrategies.BuyRandomAmountAtLastPrice, BuyAndSellStrategy.SellStrategies.SellRandomAmountOfProfitableAtLastPrice);
 reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "Different starting assets");
@@ -57,7 +48,7 @@ await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks,
     GetSlowlyFallingPriceSimulator,
     factory,
     reporter);
-ScoreCardSummarizer.PrintReport(reporter.BotScoreCardsForAllRounds, scoreCard => scoreCard.TotalRealizedProfit, output);
+ScoreCardSummarizer.PrintReport(reporter, scoreCard => scoreCard.TotalRealizedProfit, output);
 
 Console.WriteLine();
 Console.WriteLine();

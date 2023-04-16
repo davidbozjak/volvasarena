@@ -23,6 +23,10 @@ class BotArena
 
             simulationResultsReporter.AddScorecard(scoreCards);
             simulationResultsReporter.AddPriceDevelopment(assetPriceProvider);
+
+#if !DEBUG
+        GC.Collect();
+#endif
         }
     }
 

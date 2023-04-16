@@ -65,8 +65,10 @@ class SimulationResultsReporter : ISimulationResultsReporter
 
             this.DoneCount++;
 
+#if DEBUG
             if (this.DoneCount > this.NumOfSimulationsToRun)
                 throw new Exception("Unexpected, done count should never exceed total number of simulations to run");
+#endif
         }
 
         if (this.DoneCount < 5 || this.DoneCount % reportInterval == 0 ||this.DoneCount == this.NumOfSimulationsToRun)
@@ -82,7 +84,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
             var elapsedSinceLastReport = now - lastReportDateTime;
             lastReportDateTime = now;
 
-            this.outputControl.WriteLine($"{now:T}: Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds ({elapsedSinceLastReport.TotalSeconds:N1} seconds since last report)");
+            this.outputControl.WriteLine($"{now:T} ({elapsedSinceLastReport.TotalSeconds:N1}): Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds");
 
             if (this.ReportSummariesToFile)
             {
@@ -98,16 +100,16 @@ class SimulationResultsReporter : ISimulationResultsReporter
 
     public void AddPriceDevelopment(IAssetPriceProvider assetPriceProvider)
     {
-        var lastPrices = assetPriceProvider.AssetPrices.Select(w => w.Price).ToArray();
+        var prices = assetPriceProvider.AssetPrices.Select(w => w.Price).ToArray();
 
         lock (this.lockingObject)
         {
-            this.priceSeries.Add(lastPrices);
+            this.priceSeries.Add(prices);
         }
 
         if (this.ReportPricesToFile)
         {
-            ChainWriteToFileAction(() => AppendPriceToFile(lastPrices));
+            ChainWriteToFileAction(() => AppendPriceToFile(prices));
         }
     }
 
@@ -174,7 +176,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
             this.pricesLogFileName = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_Prices.csv";
         }
 
-        return new StreamWriter(this.pricesLogFileName, true);
+        return new StreamWriter(this.pricesLogFileName, true, System.Text.Encoding.UTF8);
     }
 
     private StreamWriter GetScoreCardsStreamForAppending()
@@ -186,7 +188,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
             this.scorecardsLogFileName = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_ScoreCards.csv";
         }
 
-        return new StreamWriter(this.scorecardsLogFileName, true);
+        return new StreamWriter(this.scorecardsLogFileName, true, System.Text.Encoding.UTF8);
     }
 
     private StreamWriter GetAnalyzedResultsStreamForWriting(bool partialResult)
@@ -195,7 +197,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
 
         var filePath = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_AnalyzedResult{(partialResult ? $"_Partial_{this.DoneCount}_{this.NumOfSimulationsToRun}" : string.Empty)}.csv";
 
-        return new StreamWriter(filePath, false);
+        return new StreamWriter(filePath, false, System.Text.Encoding.UTF8);
     }
 
     private DirectoryInfo EnsureResultsDirExists()

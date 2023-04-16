@@ -2,32 +2,24 @@
 
 class BotArena
 {
-    public static async Task CompareStrategiesAsync(AssetType assetType, double startAssetPrice, int ticksInRound, int numOfSimulationsToRun, ITransactionCostCalculator transactionCostCalculator,
+    public static void CompareStrategies(AssetType assetType, double startAssetPrice, int ticksInRound, int numOfSimulationsToRun, ITransactionCostCalculator transactionCostCalculator,
         Func<double, AssetType, IAssetPriceProvider> assetPriceProviderFactory,
         ITraderBotFactory botFactory,
         ISimulationResultsReporter simulationResultsReporter)
     {
         var botEvaluator = new TraderBotEvaluator();
 
-        var tasks = Enumerable.Range(0, numOfSimulationsToRun)
-            .Select(w => Task<(TraderBotScoreCard[], IAssetPriceProvider)>.Run(() => RunOneSimulation(startAssetPrice, assetType, ticksInRound, transactionCostCalculator, assetPriceProviderFactory, botFactory, botEvaluator)))
-            .ToList();
-
-        while (tasks.Any())
+        Parallel.For(0, numOfSimulationsToRun, i =>
         {
-            var finishedTask = await Task.WhenAny(tasks);
-
-            (var scoreCards, var assetPriceProvider) = finishedTask.Result;
-
-            tasks.Remove(finishedTask);
-
+            (var scoreCards, var assetPriceProvider) = RunOneSimulation(startAssetPrice, assetType, ticksInRound, transactionCostCalculator, assetPriceProviderFactory, botFactory, botEvaluator);
+            
             simulationResultsReporter.AddScorecard(scoreCards);
             simulationResultsReporter.AddPriceDevelopment(assetPriceProvider);
 
 #if !DEBUG
-        GC.Collect();
+                    GC.Collect();
 #endif
-        }
+        });
     }
 
     public static (TraderBotScoreCard[], IAssetPriceProvider) RunOneSimulation(double startAssetPrice, AssetType assetType, int ticksInRound, ITransactionCostCalculator transactionCostCalculator, Func<double, AssetType, IAssetPriceProvider> assetPriceProviderFactory, ITraderBotFactory botFactory, ITraderBotEvaluator evaluator)

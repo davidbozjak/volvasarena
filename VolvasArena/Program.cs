@@ -17,7 +17,7 @@ var sellStrategies = BuyAndSellStrategy.GetSellSrategies().ToArray();
 ITraderBotFactory factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
 var reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "BALANCED") { ReportSummariesToFile = true };
 
-await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AlwaysFreeTransactionCostCalculator(),
+BotArena.CompareStrategies(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AlwaysFreeTransactionCostCalculator(),
     GetBalancedPriceSimulator,
     factory,
     reporter);
@@ -26,7 +26,7 @@ ScoreCardSummarizer.PrintReport(reporter, scoreCard => scoreCard.TotalRealizedPr
 factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
 reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "FALLING");
 
-await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
+BotArena.CompareStrategies(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
     GetSlowlyFallingPriceSimulator,
     factory,
     reporter);
@@ -35,7 +35,7 @@ ScoreCardSummarizer.PrintReport(reporter, scoreCard => scoreCard.TotalRealizedPr
 factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
 reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "RAISING");
 
-await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
+BotArena.CompareStrategies(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
     GetSlowlyRisingPriceSimulator,
     factory,
     reporter);
@@ -44,7 +44,7 @@ ScoreCardSummarizer.PrintReport(reporter, scoreCard => scoreCard.TotalRealizedPr
 factory = new BotArena.DifferentStartMoneyFactory(1000, 10000, 5, assetType, BuyAndSellStrategy.BuyStrategies.BuyRandomAmountAtLastPrice, BuyAndSellStrategy.SellStrategies.SellRandomAmountOfProfitableAtLastPrice);
 reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "Different starting assets");
 
-await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
+BotArena.CompareStrategies(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
     GetSlowlyFallingPriceSimulator,
     factory,
     reporter);
@@ -71,7 +71,7 @@ selectionIndex = 0;
 Console.WriteLine(string.Join(Environment.NewLine, sellStrategies.Select(w => $"{selectionIndex++}> {w.Item1}")));
 int sellStrategyId = int.Parse(Console.ReadLine());
 
-//var botFactory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, new[] { buyStrategies[buyStrategyId] }, new[] { sellStrategies[sellStrategyId] });
+var botFactory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, new[] { buyStrategies[buyStrategyId] }, new[] { sellStrategies[sellStrategyId] });
 
 Console.WriteLine();
 Console.WriteLine();

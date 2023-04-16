@@ -1,5 +1,7 @@
 # Völvas Arena
-Inspired by Völva who glances the future in the norse mythology, this project allows you to simply simulate the price of an asset in a stock market and compare different strategies of buying and selling to find the best performing one(s)
+![alt text](https://github.com/davidbozjak/volvasarena/blob/main/Volva_pic.jpg?raw=true)
+
+Inspired by Völva who glances the future in the Norse mythology, this project allows you to simply simulate the price of an asset in a stock market and compare different strategies of buying and selling to find the best performing one(s)
 
 For most uses, the file to look at is the BuyAndSellStrategy. That's where the different buy and sell strategies are implemented. To compare your own strategy simply make another method, and it will be entered into the arena via reflection.
 

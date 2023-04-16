@@ -10,10 +10,7 @@
         foreach (var method in methods)
         {
             var customAttributes = method.GetCustomAttributes(typeof(SkipWhenFormingExecutionListAttribute), false);
-
-            bool shouldRun = customAttributes == null ||
-                customAttributes.Length == 0 ||
-                ((SkipWhenFormingExecutionListAttribute)customAttributes[0]).Skip != true;
+            bool shouldRun = ShouldIncludeStrategy(customAttributes);
 
             if (shouldRun)
             {
@@ -30,16 +27,25 @@
         foreach (var method in methods)
         {
             var customAttributes = method.GetCustomAttributes(typeof(SkipWhenFormingExecutionListAttribute), false);
-
-            bool shouldRun = customAttributes == null ||
-                customAttributes.Length == 0 ||
-                ((SkipWhenFormingExecutionListAttribute)customAttributes[0]).Skip != true;
+            bool shouldRun = ShouldIncludeStrategy(customAttributes);
 
             if (shouldRun)
             {
                 yield return (method.Name, method.CreateDelegate<TraderBot.GetAssetsToSellDelegate>());
             }
         }
+    }
+
+    private static bool ShouldIncludeStrategy(object[] customAttributes)
+    {
+#if DEBUG
+        return 
+            customAttributes == null ||
+            customAttributes.Length == 0 ||
+            ((SkipWhenFormingExecutionListAttribute)customAttributes[0]).Skip != true;
+#else
+        return true;
+#endif
     }
 
     public static class BuyStrategies
@@ -202,7 +208,7 @@
             return LeaveOldOrBuyTheDipAtX(1, currentTick, currentMoneyAvaliable, lastPrice, latest10Prices, currentOwnedAssets, outsdandingBuyOrders, outsdandingSellOrders, transactionCostCalculator);
         }
 
-        ////[SkipWhenFormingExecutionList(Skip = true)]
+        //[SkipWhenFormingExecutionList(Skip = true)]
         public static IEnumerable<(int amount, double price)> LeaveOldOrBuyTheDipAt101(int currentTick, double currentMoneyAvaliable, double lastPrice, IEnumerable<AssetPrice> latest10Prices, IEnumerable<Asset> currentOwnedAssets, IEnumerable<MarketplaceBuyOrder> outsdandingBuyOrders, IEnumerable<MarketplaceSellOrder> outsdandingSellOrders, ITransactionCostCalculator transactionCostCalculator)
         {
             return LeaveOldOrBuyTheDipAtX(1.01, currentTick, currentMoneyAvaliable, lastPrice, latest10Prices, currentOwnedAssets, outsdandingBuyOrders, outsdandingSellOrders, transactionCostCalculator);

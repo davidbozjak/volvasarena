@@ -23,11 +23,18 @@ class SimulationResultsReporter : ISimulationResultsReporter
 
     public int DoneCount { get; private set; }
 
+    public bool ReportToFile { get; init; } = false;
+
     private readonly List<TraderBotScoreCard>[] scorecards;
     public IReadOnlyList<TraderBotScoreCard>[] BotScoreCardsForAllRounds => this.scorecards.Select(w => w.AsReadOnly()).ToArray();
 
     private readonly List<double[]> priceSeries;
     public IReadOnlyList<double[]> PriceSeries => this.priceSeries.AsReadOnly();
+
+    private Task writeResultToFileTask = Task.CompletedTask;
+
+    private string pricesLogFileName = string.Empty;
+    private string scorecardsLogFileName = string.Empty;
 
     public SimulationResultsReporter(int numOfSimulationsToRun, ITraderBotFactory botFactory, IDateTimeProvider dateTimeProvider, IOutputControl outputControl, string runInfo)
     {
@@ -56,29 +63,112 @@ class SimulationResultsReporter : ISimulationResultsReporter
 
             if (this.DoneCount > this.NumOfSimulationsToRun)
                 throw new Exception("Unexpected, done count should never exceed total number of simulations to run");
+        }
 
-            if (this.DoneCount < 5 || this.DoneCount % reportInterval == 0)
-            {
-                var now = this.dateTimeProvider.Now;
+        if (this.DoneCount < 5 || this.DoneCount % reportInterval == 0)
+        {
+            var now = this.dateTimeProvider.Now;
 
-                var ellapsed = now - startDateTime;
-                var millisecondsPerSimulation = ellapsed.TotalMilliseconds / this.DoneCount;
-                var remainingSimulationsToRun = this.NumOfSimulationsToRun - this.DoneCount;
-                var approxRemainingMilliseconds = millisecondsPerSimulation * remainingSimulationsToRun;
-                var ETA = now.AddMilliseconds(approxRemainingMilliseconds);
+            var ellapsed = now - startDateTime;
+            var millisecondsPerSimulation = ellapsed.TotalMilliseconds / this.DoneCount;
+            var remainingSimulationsToRun = this.NumOfSimulationsToRun - this.DoneCount;
+            var approxRemainingMilliseconds = millisecondsPerSimulation * remainingSimulationsToRun;
+            var ETA = now.AddMilliseconds(approxRemainingMilliseconds);
 
-                this.outputControl.WriteLine($"{now:T}: Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds");
-            }
+            this.outputControl.WriteLine($"{now:T}: Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds");
+        }
+
+        if (this.ReportToFile)
+        {
+            ChainWriteToFileAction(() => AppendScoreCardsToFile(DoneCount, scoreCards));
         }
     }
 
     public void AddPriceDevelopment(IAssetPriceProvider assetPriceProvider)
     {
+        var lastPrices = assetPriceProvider.AssetPrices.Select(w => w.Price).ToArray();
+
         lock (this.lockingObject)
         {
-            this.priceSeries.Add(assetPriceProvider.AssetPrices.Select(w => w.Price).ToArray());
+            this.priceSeries.Add(lastPrices);
+        }
+
+        if (this.ReportToFile)
+        {
+            ChainWriteToFileAction(() => AppendPriceToFile(lastPrices));
         }
     }
 
+    private void ChainWriteToFileAction(Action writeToFileAction)
+    {
+        lock (this.lockingObject)
+        {
+            if (this.writeResultToFileTask.IsCompleted || this.writeResultToFileTask.IsCanceled || this.writeResultToFileTask.IsFaulted)
+            {
+                this.writeResultToFileTask = Task.Run(writeToFileAction);
+            }
+            else
+            {
+                this.writeResultToFileTask = this.writeResultToFileTask.ContinueWith(_ => writeToFileAction());
+            }
+        }
+    }
 
+    private void AppendPriceToFile(double[] prices)
+    {
+        using StreamWriter streamWriter = GetPriceLogStreamForAppending();
+
+        streamWriter.WriteLine(string.Join(';', prices));
+    }
+
+    private void AppendScoreCardsToFile(int simNum, TraderBotScoreCard[] scoreCards)
+    {
+        using StreamWriter streamWriter = GetScoreCardsStreamForAppending();
+
+        streamWriter.WriteLine("");
+        streamWriter.WriteLine($"Scorecards sim{simNum}");
+        
+        foreach (var scorecard in scoreCards)
+        {
+            streamWriter.WriteLine(scorecard);
+        }
+    }
+
+    private StreamWriter GetPriceLogStreamForAppending()
+    {
+        var dir = EnsureResultsDirExists();
+
+        if (string.IsNullOrWhiteSpace(this.pricesLogFileName))
+        {
+            this.pricesLogFileName = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_Prices.csv";
+        }
+
+        return new StreamWriter(this.pricesLogFileName, true);
+    }
+
+    private StreamWriter GetScoreCardsStreamForAppending()
+    {
+        var dir = EnsureResultsDirExists();
+
+        if (string.IsNullOrWhiteSpace(this.pricesLogFileName))
+        {
+            this.scorecardsLogFileName = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_ScoreCards.csv";
+        }
+
+        return new StreamWriter(this.scorecardsLogFileName, true);
+    }
+
+    private DirectoryInfo EnsureResultsDirExists()
+    {
+        var directoryName = "SimulationResults";
+
+        if (!Directory.Exists(directoryName))
+        {
+            return Directory.CreateDirectory(directoryName);
+        }
+        else
+        {
+            return new DirectoryInfo(directoryName);
+        }
+    }
 }

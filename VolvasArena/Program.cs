@@ -15,7 +15,7 @@ var buyStrategies = BuyAndSellStrategy.GetBuySrategies().ToArray();
 var sellStrategies = BuyAndSellStrategy.GetSellSrategies().ToArray();
 
 ITraderBotFactory factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
-var reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "BALANCED");
+var reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "BALANCED") { ReportToFile = true };
 
 await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AlwaysFreeTransactionCostCalculator(),
     GetBalancedPriceSimulator,
@@ -71,7 +71,7 @@ selectionIndex = 0;
 Console.WriteLine(string.Join(Environment.NewLine, sellStrategies.Select(w => $"{selectionIndex++}> {w.Item1}")));
 int sellStrategyId = int.Parse(Console.ReadLine());
 
-var botFactory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, new[] { buyStrategies[buyStrategyId] }, new[] { sellStrategies[sellStrategyId] });
+//var botFactory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, new[] { buyStrategies[buyStrategyId] }, new[] { sellStrategies[sellStrategyId] });
 
 Console.WriteLine();
 Console.WriteLine();

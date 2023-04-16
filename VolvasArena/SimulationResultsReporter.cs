@@ -65,7 +65,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
                 throw new Exception("Unexpected, done count should never exceed total number of simulations to run");
         }
 
-        if (this.DoneCount < 5 || this.DoneCount % reportInterval == 0)
+        if (this.DoneCount < 5 || this.DoneCount % reportInterval == 0 ||this.DoneCount == this.NumOfSimulationsToRun)
         {
             var now = this.dateTimeProvider.Now;
 
@@ -76,6 +76,11 @@ class SimulationResultsReporter : ISimulationResultsReporter
             var ETA = now.AddMilliseconds(approxRemainingMilliseconds);
 
             this.outputControl.WriteLine($"{now:T}: Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds");
+
+            if (this.ReportToFile)
+            {
+                ChainWriteToFileAction(() => GenerateCurrentResultsSummaryToFile());
+            }
         }
 
         if (this.ReportToFile)
@@ -111,6 +116,25 @@ class SimulationResultsReporter : ISimulationResultsReporter
             {
                 this.writeResultToFileTask = this.writeResultToFileTask.ContinueWith(_ => writeToFileAction());
             }
+        }
+    }
+
+    private void GenerateCurrentResultsSummaryToFile()
+    {
+        var partialResults = this.DoneCount != this.NumOfSimulationsToRun;
+        using StreamWriter streamWriter = GetAnalyzedResultsStreamForWriting(partialResults);
+        var fileOutput = new FileOutputControl(streamWriter);
+
+        if (partialResults)
+        {
+            fileOutput.WriteLine($"Partial results, done {this.DoneCount} / {this.NumOfSimulationsToRun} simulations");
+            fileOutput.WriteLine("");
+        }
+        
+        //lock since we can't allow our results to change while we are generating results - we are passing ourselves to the summarizer!
+        lock (this.lockingObject)
+        {
+            ScoreCardSummarizer.PrintReport(this, t => t.TotalRealizedProfit, fileOutput);
         }
     }
 
@@ -156,6 +180,15 @@ class SimulationResultsReporter : ISimulationResultsReporter
         }
 
         return new StreamWriter(this.scorecardsLogFileName, true);
+    }
+
+    private StreamWriter GetAnalyzedResultsStreamForWriting(bool partialResult)
+    {
+        var dir = EnsureResultsDirExists();
+
+        var filePath = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_AnalyzedResult{(partialResult ? "_Partial" : string.Empty)}.csv";
+
+        return new StreamWriter(filePath, false);
     }
 
     private DirectoryInfo EnsureResultsDirExists()

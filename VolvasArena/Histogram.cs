@@ -34,6 +34,11 @@ class Histogram
         var minValue = orderedValues.First();
         var maxValue = orderedValues.Last();
 
+        if (minValue == maxValue)
+        {
+            maxValue += 1e-5;
+        }
+
         var step = (maxValue - minValue) / numberOfBuckets;
 
         var bucketList = new List<HistogramBucket>();

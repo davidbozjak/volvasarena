@@ -5,27 +5,28 @@ class BotArena
     public static async Task CompareStrategiesAsync(AssetType assetType, double startAssetPrice, int ticksInRound, int numOfSimulationsToRun, ITransactionCostCalculator transactionCostCalculator,
         Func<double, AssetType, IAssetPriceProvider> assetPriceProviderFactory,
         ITraderBotFactory botFactory,
-        IScorecardReporter scorecardReporter)
+        ISimulationResultsReporter simulationResultsReporter)
     {
         var botEvaluator = new TraderBotEvaluator();
 
         var tasks = Enumerable.Range(0, numOfSimulationsToRun)
-            .Select(w => Task<TraderBotScoreCard[]>.Run(() => RunOneSimulation(startAssetPrice, assetType, ticksInRound, transactionCostCalculator, assetPriceProviderFactory, botFactory, botEvaluator)))
+            .Select(w => Task<(TraderBotScoreCard[], IAssetPriceProvider)>.Run(() => RunOneSimulation(startAssetPrice, assetType, ticksInRound, transactionCostCalculator, assetPriceProviderFactory, botFactory, botEvaluator)))
             .ToList();
 
         while (tasks.Any())
         {
             var finishedTask = await Task.WhenAny(tasks);
 
-            var scoreCards = finishedTask.Result;
+            (var scoreCards, var assetPriceProvider) = finishedTask.Result;
 
             tasks.Remove(finishedTask);
 
-            scorecardReporter.AddScorecard(scoreCards);
+            simulationResultsReporter.AddScorecard(scoreCards);
+            simulationResultsReporter.AddPriceDevelopment(assetPriceProvider);
         }
     }
 
-    public static TraderBotScoreCard[] RunOneSimulation(double startAssetPrice, AssetType assetType, int ticksInRound, ITransactionCostCalculator transactionCostCalculator, Func<double, AssetType, IAssetPriceProvider> assetPriceProviderFactory, ITraderBotFactory botFactory, ITraderBotEvaluator evaluator)
+    public static (TraderBotScoreCard[], IAssetPriceProvider) RunOneSimulation(double startAssetPrice, AssetType assetType, int ticksInRound, ITransactionCostCalculator transactionCostCalculator, Func<double, AssetType, IAssetPriceProvider> assetPriceProviderFactory, ITraderBotFactory botFactory, ITraderBotEvaluator evaluator)
     {
         var assetPriceProvider = assetPriceProviderFactory(startAssetPrice, assetType);
 
@@ -41,7 +42,7 @@ class BotArena
             marketplace.MakeTick();
         }
 
-        return bots.Select(evaluator.Evaluate).ToArray();
+        return (bots.Select(evaluator.Evaluate).ToArray(), assetPriceProvider);
     }
 
     public interface ITraderBotFactory

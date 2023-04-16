@@ -2,7 +2,7 @@
 
 static class ScoreCardSummarizer
 {
-    public static void PrintReport(List<TraderBotScoreCard>[] scorecards, Func<TraderBotScoreCard, double> kpiSelector, IOutputControl output)
+    public static void PrintReport(IReadOnlyList<TraderBotScoreCard>[] scorecards, Func<TraderBotScoreCard, double> kpiSelector, IOutputControl output)
     {
         int numberOfBots = scorecards.Length;
         int numberOfRoundsSimulated = scorecards[0].Count;

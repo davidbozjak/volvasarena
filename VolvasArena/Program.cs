@@ -24,7 +24,7 @@ var buyStrategies = BuyAndSellStrategy.GetBuySrategies().ToArray();
 var sellStrategies = BuyAndSellStrategy.GetSellSrategies().ToArray();
 
 ITraderBotFactory factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
-var reporter = new ScorecardReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "BALANCED");
+var reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "BALANCED");
 
 await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AlwaysFreeTransactionCostCalculator(),
     GetBalancedPriceSimulator,
@@ -33,7 +33,7 @@ await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks,
 ScoreCardSummarizer.PrintReport(reporter.BotScoreCardsForAllRounds, scoreCard => scoreCard.TotalRealizedProfit, output);
 
 factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
-reporter = new ScorecardReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "FALLING");
+reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "FALLING");
 
 await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
     GetSlowlyFallingPriceSimulator,
@@ -42,7 +42,7 @@ await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks,
 ScoreCardSummarizer.PrintReport(reporter.BotScoreCardsForAllRounds, scoreCard => scoreCard.TotalRealizedProfit, output);
 
 factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
-reporter = new ScorecardReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "RAISING");
+reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "RAISING");
 
 await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
     GetSlowlyRisingPriceSimulator,
@@ -51,7 +51,7 @@ await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks,
 ScoreCardSummarizer.PrintReport(reporter.BotScoreCardsForAllRounds, scoreCard => scoreCard.TotalRealizedProfit, output);
 
 factory = new BotArena.DifferentStartMoneyFactory(1000, 10000, 5, assetType, BuyAndSellStrategy.BuyStrategies.BuyRandomAmountAtLastPrice, BuyAndSellStrategy.SellStrategies.SellRandomAmountOfProfitableAtLastPrice);
-reporter = new ScorecardReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "Different starting assets");
+reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "Different starting assets");
 
 await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AvanzaMiniCourtage(),
     GetSlowlyFallingPriceSimulator,
@@ -89,7 +89,7 @@ string filePath = Console.ReadLine();
 
 var historicalDataProvider = new AssetPriceSimpleCSVReader(new AssetType(""), filePath);
 
-var scorecards = BotArena.RunOneSimulation(double.NaN, historicalDataProvider.AssetType, historicalDataProvider.TotalTicksAvaliable - Marketplace.TicksOfHistoryToProvide,
+(var scorecards, _) = BotArena.RunOneSimulation(double.NaN, historicalDataProvider.AssetType, historicalDataProvider.TotalTicksAvaliable - Marketplace.TicksOfHistoryToProvide,
     new AvanzaMiniCourtage(), (_, _) => historicalDataProvider, botFactory, new BotArena.TraderBotEvaluator());
 
 Console.WriteLine();

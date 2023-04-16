@@ -1,11 +1,13 @@
 ﻿using static BotArena;
 
-interface IScorecardReporter
+interface ISimulationResultsReporter
 {
     void AddScorecard(TraderBotScoreCard[] scoreCards);
+
+    void AddPriceDevelopment(IAssetPriceProvider assetPriceProvider);
 }
 
-class ScorecardReporter : IScorecardReporter
+class SimulationResultsReporter : ISimulationResultsReporter
 {
     private readonly object lockingObject = new object();
     private readonly int reportInterval;
@@ -17,17 +19,22 @@ class ScorecardReporter : IScorecardReporter
 
     public int DoneCount { get; private set; }
 
-    public List<TraderBotScoreCard>[] BotScoreCardsForAllRounds { get; }
+    private readonly List<TraderBotScoreCard>[] scorecards;
+    public IReadOnlyList<TraderBotScoreCard>[] BotScoreCardsForAllRounds => this.scorecards.Select(w => w.AsReadOnly()).ToArray();
 
-    public ScorecardReporter(int numOfSimulationsToRun, ITraderBotFactory botFactory, IDateTimeProvider dateTimeProvider, IOutputControl outputControl, string runInfo)
+    private readonly List<double[]> priceSeries;
+    public IReadOnlyList<double[]> PriceSeries => this.priceSeries.AsReadOnly();
+
+    public SimulationResultsReporter(int numOfSimulationsToRun, ITraderBotFactory botFactory, IDateTimeProvider dateTimeProvider, IOutputControl outputControl, string runInfo)
     {
         this.NumOfSimulationsToRun = numOfSimulationsToRun;
-        this.BotScoreCardsForAllRounds = Enumerable.Range(0, botFactory.NumberThatWillBeCreated).Select(w => new List<TraderBotScoreCard>()).ToArray();
         this.reportInterval = (int)Math.Sqrt(numOfSimulationsToRun);
         this.dateTimeProvider = dateTimeProvider;
         this.outputControl = outputControl;
-
         this.startDateTime = dateTimeProvider.Now;
+
+        this.scorecards = Enumerable.Range(0, botFactory.NumberThatWillBeCreated).Select(w => new List<TraderBotScoreCard>()).ToArray();
+        this.priceSeries = new List<double[]>();
 
         this.outputControl.WriteLine($"Preparing to run {numOfSimulationsToRun} of simulation, comparing {botFactory.NumberThatWillBeCreated} bots. {runInfo}");
     }
@@ -38,7 +45,7 @@ class ScorecardReporter : IScorecardReporter
         {
             for (int i = 0; i < scoreCards.Length; i++)
             {
-                this.BotScoreCardsForAllRounds[i].Add(scoreCards[i]);
+                this.scorecards[i].Add(scoreCards[i]);
             }
 
             this.DoneCount++;
@@ -60,4 +67,14 @@ class ScorecardReporter : IScorecardReporter
             }
         }
     }
+
+    public void AddPriceDevelopment(IAssetPriceProvider assetPriceProvider)
+    {
+        lock (this.lockingObject)
+        {
+            this.priceSeries.Add(assetPriceProvider.AssetPrices.Select(w => w.Price).ToArray());
+        }
+    }
+
+
 }

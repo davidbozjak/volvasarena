@@ -15,7 +15,7 @@ var buyStrategies = BuyAndSellStrategy.GetBuySrategies().ToArray();
 var sellStrategies = BuyAndSellStrategy.GetSellSrategies().ToArray();
 
 ITraderBotFactory factory = new BotArena.DifferentStrategiesFactory(startMoney, assetType, buyStrategies, sellStrategies);
-var reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "BALANCED") { ReportToFile = true };
+var reporter = new SimulationResultsReporter(numOfSimulationsToRun, factory, dateTimeProvider, output, "BALANCED") { ReportSummariesToFile = true };
 
 await BotArena.CompareStrategiesAsync(assetType, startAssetPrice, simulateTicks, numOfSimulationsToRun, new AlwaysFreeTransactionCostCalculator(),
     GetBalancedPriceSimulator,

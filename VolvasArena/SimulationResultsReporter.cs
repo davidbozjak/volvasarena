@@ -19,11 +19,15 @@ class SimulationResultsReporter : ISimulationResultsReporter
     private readonly DateTime startDateTime;
     private readonly IOutputControl outputControl;
 
+    private DateTime lastReportDateTime;
+
     public int NumOfSimulationsToRun { get; }
 
     public int DoneCount { get; private set; }
 
-    public bool ReportToFile { get; init; } = false;
+    public bool ReportPricesToFile { get; init; } = false;
+    public bool ReportScorecardsToFile { get; init; } = false;
+    public bool ReportSummariesToFile { get; init; } = false;
 
     private readonly List<TraderBotScoreCard>[] scorecards;
     public IReadOnlyList<TraderBotScoreCard>[] BotScoreCardsForAllRounds => this.scorecards.Select(w => w.AsReadOnly()).ToArray();
@@ -42,7 +46,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
         this.reportInterval = (int)Math.Sqrt(numOfSimulationsToRun);
         this.dateTimeProvider = dateTimeProvider;
         this.outputControl = outputControl;
-        this.startDateTime = dateTimeProvider.Now;
+        this.startDateTime = lastReportDateTime = dateTimeProvider.Now;
 
         this.scorecards = Enumerable.Range(0, botFactory.NumberThatWillBeCreated).Select(w => new List<TraderBotScoreCard>()).ToArray();
         this.priceSeries = new List<double[]>();
@@ -69,21 +73,24 @@ class SimulationResultsReporter : ISimulationResultsReporter
         {
             var now = this.dateTimeProvider.Now;
 
-            var ellapsed = now - startDateTime;
-            var millisecondsPerSimulation = ellapsed.TotalMilliseconds / this.DoneCount;
+            var elapsed = now - startDateTime;
+            var millisecondsPerSimulation = elapsed.TotalMilliseconds / this.DoneCount;
             var remainingSimulationsToRun = this.NumOfSimulationsToRun - this.DoneCount;
             var approxRemainingMilliseconds = millisecondsPerSimulation * remainingSimulationsToRun;
             var ETA = now.AddMilliseconds(approxRemainingMilliseconds);
 
-            this.outputControl.WriteLine($"{now:T}: Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds");
+            var elapsedSinceLastReport = now - lastReportDateTime;
+            lastReportDateTime = now;
 
-            if (this.ReportToFile)
+            this.outputControl.WriteLine($"{now:T}: Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds ({elapsedSinceLastReport.TotalSeconds:N1} seconds since last report)");
+
+            if (this.ReportSummariesToFile)
             {
                 ChainWriteToFileAction(() => GenerateCurrentResultsSummaryToFile());
             }
         }
 
-        if (this.ReportToFile)
+        if (this.ReportScorecardsToFile)
         {
             ChainWriteToFileAction(() => AppendScoreCardsToFile(DoneCount, scoreCards));
         }
@@ -98,7 +105,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
             this.priceSeries.Add(lastPrices);
         }
 
-        if (this.ReportToFile)
+        if (this.ReportPricesToFile)
         {
             ChainWriteToFileAction(() => AppendPriceToFile(lastPrices));
         }
@@ -186,7 +193,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
     {
         var dir = EnsureResultsDirExists();
 
-        var filePath = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_AnalyzedResult{(partialResult ? "_Partial" : string.Empty)}.csv";
+        var filePath = $"{dir.FullName}\\SimResults_{this.startDateTime.ToString("yyyy-MM-dd--HH-mm-ss")}_AnalyzedResult{(partialResult ? $"_Partial_{this.DoneCount}_{this.NumOfSimulationsToRun}" : string.Empty)}.csv";
 
         return new StreamWriter(filePath, false);
     }

@@ -9,7 +9,11 @@ class BotArena
     {
         var botEvaluator = new TraderBotEvaluator();
 
-        Parallel.For(0, numOfSimulationsToRun, i =>
+        var limitByMemory = System.Environment.WorkingSet / (5 * 1024 * 1024);
+        var limitByProcessors = System.Environment.ProcessorCount * 2;
+        var maxDegreeOfParallelism = (int)Math.Min(limitByMemory, limitByProcessors);
+
+        Parallel.For(0, numOfSimulationsToRun, new ParallelOptions() { MaxDegreeOfParallelism = maxDegreeOfParallelism }, i =>
         {
             simulationResultsReporter.ReportStartingSimulation(i);
 

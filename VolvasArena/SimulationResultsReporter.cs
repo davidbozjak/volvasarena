@@ -176,7 +176,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
         //lock since we can't allow our results to change while we are generating results - we are passing ourselves to the summarizer!
         lock (this.lockingObject)
         {
-            ScoreCardSummarizer.PrintReport(this, t => t.TotalRealizedProfit, fileOutput);
+            ScoreCardSummarizer.PrintReportTable(this, t => t.TotalRealizedProfit, fileOutput);
         }
     }
 

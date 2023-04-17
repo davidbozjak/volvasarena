@@ -11,13 +11,17 @@ class BotArena
 
         Parallel.For(0, numOfSimulationsToRun, i =>
         {
+            simulationResultsReporter.ReportStartingSimulation(i);
+
             (var scoreCards, var assetPriceProvider) = RunOneSimulation(startAssetPrice, assetType, ticksInRound, transactionCostCalculator, assetPriceProviderFactory, botFactory, botEvaluator);
-            
+
+            simulationResultsReporter.ReportFinishedSimulation(i);
+
             simulationResultsReporter.AddScorecard(scoreCards);
             simulationResultsReporter.AddPriceDevelopment(assetPriceProvider);
 
 #if !DEBUG
-                    GC.Collect();
+            GC.Collect();
 #endif
         });
     }

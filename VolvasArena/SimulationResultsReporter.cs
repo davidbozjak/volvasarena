@@ -6,6 +6,10 @@ interface ISimulationResultsReporter
 
     IReadOnlyList<double[]> PriceSeries { get; }
 
+    void ReportStartingSimulation(int id);
+
+    void ReportFinishedSimulation(int id);
+
     void AddScorecard(TraderBotScoreCard[] scoreCards);
 
     void AddPriceDevelopment(IAssetPriceProvider assetPriceProvider);
@@ -18,6 +22,7 @@ class SimulationResultsReporter : ISimulationResultsReporter
     private readonly IDateTimeProvider dateTimeProvider;
     private readonly DateTime startDateTime;
     private readonly IOutputControl outputControl;
+    private readonly List<int> ongoingSimulationIds = new List<int>();
 
     private DateTime lastReportDateTime;
 
@@ -54,14 +59,29 @@ class SimulationResultsReporter : ISimulationResultsReporter
         this.outputControl.WriteLine($"Preparing to run {numOfSimulationsToRun} of simulation, comparing {botFactory.NumberThatWillBeCreated} bots. {runInfo}");
     }
 
-    public void AddScorecard(TraderBotScoreCard[] scoreCards)
+    public void ReportStartingSimulation(int id)
     {
-        lock (lockingObject)
+        lock (this.lockingObject)
         {
-            for (int i = 0; i < scoreCards.Length; i++)
-            {
-                this.scorecards[i].Add(scoreCards[i]);
-            }
+#if DEBUG
+
+        if (this.ongoingSimulationIds.Contains(id))
+            throw new Exception();
+#endif
+
+            this.ongoingSimulationIds.Add(id);
+        }
+    }
+
+    public void ReportFinishedSimulation(int id)
+    {
+        lock (this.lockingObject)
+        {
+#if DEBUG
+
+        if (!this.ongoingSimulationIds.Contains(id))
+            throw new Exception();
+#endif
 
             this.DoneCount++;
 
@@ -69,9 +89,11 @@ class SimulationResultsReporter : ISimulationResultsReporter
             if (this.DoneCount > this.NumOfSimulationsToRun)
                 throw new Exception("Unexpected, done count should never exceed total number of simulations to run");
 #endif
+
+            this.ongoingSimulationIds.Remove(id);
         }
 
-        if (this.DoneCount < 5 || this.DoneCount % reportInterval == 0 ||this.DoneCount == this.NumOfSimulationsToRun)
+        if (this.DoneCount < 5 || this.DoneCount % reportInterval == 0 || this.DoneCount == this.NumOfSimulationsToRun)
         {
             var now = this.dateTimeProvider.Now;
 
@@ -84,11 +106,22 @@ class SimulationResultsReporter : ISimulationResultsReporter
             var elapsedSinceLastReport = now - lastReportDateTime;
             lastReportDateTime = now;
 
-            this.outputControl.WriteLine($"{now:T} ({elapsedSinceLastReport.TotalSeconds:N1}): Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds");
+            this.outputControl.WriteLine($"{now:T} ({elapsedSinceLastReport.TotalSeconds:N1}): Completed simulation {this.DoneCount} / {this.NumOfSimulationsToRun}. ETA: {ETA:T}, in ~{approxRemainingMilliseconds / 1000:N0} seconds. {this.ongoingSimulationIds.Count} ongoing simulations");
 
             if (this.ReportSummariesToFile)
             {
                 ChainWriteToFileAction(() => GenerateCurrentResultsSummaryToFile());
+            }
+        }
+    }
+
+    public void AddScorecard(TraderBotScoreCard[] scoreCards)
+    {
+        lock (lockingObject)
+        {
+            for (int i = 0; i < scoreCards.Length; i++)
+            {
+                this.scorecards[i].Add(scoreCards[i]);
             }
         }
 

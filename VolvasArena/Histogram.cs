@@ -1,4 +1,9 @@
-﻿record HistogramBucket(double LowThreshold, double HighThreshold);
+﻿record HistogramBucket(double LowThreshold, double HighThreshold, string DisplayText)
+{
+    public HistogramBucket(double LowThreshold, double HighThreshold)
+        :this(LowThreshold, HighThreshold, $"{LowThreshold.ToString("0.00")} - {HighThreshold.ToString("0.00")}")
+    { }
+}
 
 class Histogram
 {
@@ -34,27 +39,21 @@ class Histogram
         var minValue = orderedValues.First();
         var maxValue = orderedValues.Last();
 
-        if (minValue == maxValue)
-        {
-            maxValue += 1e-5;
-        }
-
-        var step = (maxValue - minValue) / numberOfBuckets;
+        var step = 1e-5 + (maxValue - minValue) / numberOfBuckets;
 
         var bucketList = new List<HistogramBucket>();
 
-        bucketList.Add(new HistogramBucket(double.MinValue, minValue + step));
-
         for (int i = 0; i < numberOfBuckets; i++)
         {
-            minValue += step;
             bucketList.Add(new HistogramBucket(minValue, minValue + step));
+            minValue += step;
         }
 
-        bucketList.Add(new HistogramBucket(minValue + step, double.MaxValue));
-
 #if DEBUG
-        if (bucketList.Count != this.NumberOfBuckets + 2)
+        if (minValue < maxValue)
+            throw new Exception("Expecting we will cover at least the whole range");
+
+        if (bucketList.Count != this.NumberOfBuckets)
             throw new Exception();
 
         for (int i = 1; i < bucketList.Count; i++)
@@ -92,17 +91,17 @@ class Histogram
         return dict;
     }
 
-    public IEnumerable<(double minValue, double maxValue, IEnumerable<double> values)> GetOrderedBuckets()
+    public IEnumerable<(double minValue, double maxValue, string displayText, IEnumerable<double> values)> GetOrderedBuckets()
     {
         var keys = this.buckets.Keys.OrderBy(w => w.LowThreshold);
 
         foreach (var key in keys)
         {
-            yield return (key.LowThreshold, key.HighThreshold, this.buckets[key]);
+            yield return (key.LowThreshold, key.HighThreshold, key.DisplayText, this.buckets[key]);
         }
     }
 
-    public void Print(IOutputControl output, int? valueOfStar = null, int? maxStarsInColumn = null)
+    public void PrintFigure(IOutputControl output, int? valueOfStar = null, int? maxStarsInColumn = null)
     {
 #if DEBUG
         if (new[] { valueOfStar, maxStarsInColumn}.Select(w => w == null ? 1 : 0).Sum() != 1)
@@ -113,13 +112,11 @@ class Histogram
             valueOfStar = (int)Math.Ceiling(this.buckets.Max(w => w.Value.Length) / (double)maxStarsInColumn);
         }
 
-        foreach ((var low, var high, var items) in this.GetOrderedBuckets())
-        {
-            var lowStr = low == double.MinValue ? "-Inf" : low.ToString("0.00");
-            var highStr = high == double.MaxValue ? "Inf" : high.ToString("0.00");
+        int columnPadding = this.buckets.Keys.Select(w => w.DisplayText.Length).Max() + 1;
 
-            var linePrefix = $"{lowStr} - {highStr}";
-            output.Write($"{linePrefix,20}:  ");
+        foreach ((var low, var high, var displayText, var items) in this.GetOrderedBuckets())
+        {
+            output.Write($"{displayText.PadRight(columnPadding)}:  ");
 
             if (items.Any())
                 output.Write("*");
@@ -134,6 +131,14 @@ class Histogram
         if (valueOfStar != 1)
         {
             output.WriteLine($"Each * represents {valueOfStar} instances");
+        }
+    }
+
+    public void PrintTable(IOutputControl output)
+    {
+        foreach ((var low, var high, var displayText, var items) in this.GetOrderedBuckets())
+        {
+            output.WriteLine($"{displayText}; {items.Count()}");
         }
     }
 }

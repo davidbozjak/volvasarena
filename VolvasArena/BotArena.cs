@@ -38,7 +38,14 @@ class BotArena
             marketplace.MakeTick();
         }
 
-        return (bots.Select(evaluator.Evaluate).ToArray(), assetPriceProvider);
+        var scorecards = bots.Select(evaluator.Evaluate).ToArray();
+
+        foreach (var botBirthCertificate in bots)
+        {
+            botBirthCertificate.Bot.Dispose();
+        }
+
+        return (scorecards, assetPriceProvider);
     }
 
     public interface ITraderBotFactory
